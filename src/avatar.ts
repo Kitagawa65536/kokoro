@@ -17,7 +17,7 @@ export class KokoroTalkAvatar {
 	private readonly view: AvatarView;
 	private settings: TtsSettings;
 	private state: AvatarRuntimeState;
-	private activeAudio: HTMLAudioElement | null = null;
+	private lastSpeechBlob: Blob | null = null;
 	private animationFrame = 0;
 	private readonly status: HTMLElement | null;
 
@@ -55,26 +55,9 @@ export class KokoroTalkAvatar {
 
 		try {
 			const blob = await this.speechRepository.synthesize(input, this.settings);
-			const { audio, playback } = await this.mouthAnalyzer.play(blob);
-			this.activeAudio = audio;
-			this.state.isSpeaking = true;
-			this.setStatus("Speaking");
-			void playback.catch((error) => {
-				const message = error instanceof Error ? error.message : String(error);
-				this.state.lastError = message;
-				this.state.isSpeaking = false;
-				this.view.setMouthLevel(0);
-				this.setStatus(`Audio playback error: ${message}`);
-			});
-			this.activeAudio.addEventListener(
-				"ended",
-				() => {
-					this.state.isSpeaking = false;
-					this.view.setMouthLevel(0);
-					this.setStatus("Ready");
-				},
-				{ once: true },
-			);
+			this.lastSpeechBlob = blob;
+			this.setStatus(`Preparing audio (${formatBytes(blob.size)})...`);
+			await this.playSpeechBlob(blob);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			this.state.lastError = message;
@@ -87,10 +70,27 @@ export class KokoroTalkAvatar {
 
 	stop(): void {
 		this.mouthAnalyzer.stop();
-		this.activeAudio = null;
 		this.state.isSpeaking = false;
 		this.view.setMouthLevel(0);
+		document.body.classList.remove("audio-pending");
 		this.setStatus("Stopped");
+	}
+
+	unlockAudio(): void {
+		this.mouthAnalyzer.unlock();
+		this.setStatus("Voice enabled");
+		document.body.classList.add("audio-unlocked");
+	}
+
+	async replayLastSpeech(): Promise<void> {
+		if (!this.lastSpeechBlob) {
+			this.setStatus("No speech audio is ready.");
+			return;
+		}
+
+		this.stop();
+		this.setStatus("Starting saved speech...");
+		await this.playSpeechBlob(this.lastSpeechBlob);
 	}
 
 	setExpression(name: string): void {
@@ -121,16 +121,63 @@ export class KokoroTalkAvatar {
 			this.status.textContent = message;
 		}
 	}
+
+	private async playSpeechBlob(blob: Blob): Promise<void> {
+		document.body.classList.add("audio-pending");
+		const { audio, playback } = await this.mouthAnalyzer.play(blob);
+		this.setStatus("Starting audio...");
+
+		void playback
+			.then(() => {
+				document.body.classList.remove("audio-pending");
+				this.state.isSpeaking = true;
+				this.setStatus("Speaking");
+			})
+			.catch((error) => {
+				const message = error instanceof Error ? error.message : String(error);
+				this.state.lastError = message;
+				this.state.isSpeaking = false;
+				this.view.setMouthLevel(0);
+				this.setStatus(`Audio playback error: ${message}`);
+			});
+
+		audio.addEventListener(
+			"ended",
+			() => {
+				this.state.isSpeaking = false;
+				this.view.setMouthLevel(0);
+				document.body.classList.remove("audio-pending");
+				this.setStatus("Ready");
+			},
+			{ once: true },
+		);
+	}
+}
+
+function formatBytes(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KiB`;
+	return `${(bytes / 1024 / 1024).toFixed(1)} MiB`;
 }
 
 const mount = document.getElementById("avatar-root") ?? document.body;
 const status = document.getElementById("status");
+const audioUnlock = document.getElementById("audio-unlock");
+const audioReplay = document.getElementById("audio-replay");
 const avatar = new KokoroTalkAvatar(mount, status);
 
 void avatar.init().catch((error) => {
 	const message = error instanceof Error ? error.message : String(error);
 	if (status) status.textContent = `Failed to initialize: ${message}`;
 	console.error(error);
+});
+
+audioUnlock?.addEventListener("click", () => {
+	avatar.unlockAudio();
+});
+
+audioReplay?.addEventListener("click", () => {
+	void avatar.replayLastSpeech();
 });
 
 Object.assign(window, { KokoroTalkAvatar: avatar });

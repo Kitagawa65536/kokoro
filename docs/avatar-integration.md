@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Vite の既定URLで `http://localhost:5173/avatar.html` を開きます。確認用に `http://localhost:5173/demo-avatar-controller.html` もあります。
+Vite の既定URLで `http://localhost:5173/kokoro/avatar.html` を開きます。確認用に `http://localhost:5173/kokoro/demo-avatar-controller.html` もあります。
 
 ## キャラクター画像
 
@@ -39,6 +39,10 @@ OpenAI API互換の `/v1/audio/speech` へPOSTします。API keyはソースコ
 ```text
 http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav
 ```
+
+## 音声再生の許可
+
+ブラウザのautoplay制限により、iframe内の文書に一度もユーザー操作がない状態では `audio.play()` が拒否されることがあります。初回はAvatar右下の `Enable Voice` をクリックしてください。TTS生成済みで再生だけが拒否された場合は `Play Last Speech` が表示され、生成済み音声を再利用して再生できます。
 
 ## 口パク画像
 

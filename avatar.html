@@ -34,12 +34,44 @@
       font: 12px/1.4 system-ui, sans-serif;
       z-index: 5;
     }
+
+    .audio-action {
+      position: fixed;
+      right: 12px;
+      z-index: 6;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 6px;
+      background: rgba(20, 20, 20, 0.78);
+      color: #fff;
+      font: 12px/1.4 system-ui, sans-serif;
+      cursor: pointer;
+    }
+
+    #audio-unlock {
+      bottom: 12px;
+    }
+
+    #audio-replay {
+      bottom: 52px;
+      display: none;
+    }
+
+    body.audio-unlocked #audio-unlock {
+      display: none;
+    }
+
+    body.audio-pending #audio-replay {
+      display: block;
+    }
   </style>
 </head>
 
 <body>
   <div id="avatar-root"></div>
   <div id="status">Loading...</div>
+  <button id="audio-replay" class="audio-action" type="button">Play Last Speech</button>
+  <button id="audio-unlock" class="audio-action" type="button">Enable Voice</button>
   <script type="module" src="./src/avatar.ts"></script>
 </body>
 

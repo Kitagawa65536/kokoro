@@ -10,28 +10,34 @@ export class OpenAiSpeechRepository {
 			headers.set("Authorization", `Bearer ${settings.apiKey}`);
 		}
 
-		console.debug(`Requesting TTS from ${endpoint}`);
-		const response = await fetch(endpoint, {
-			method: "POST",
-			headers,
-			signal: abortController.signal,
-			body: JSON.stringify({
-				model: settings.ttsModel,
-				voice: settings.voice,
-				input: text,
-				response_format: settings.responseFormat,
-			}),
-		}).finally(() => window.clearTimeout(timeout));
-		console.debug(`TTS response: ${response.status} ${response.statusText}`);
+		try {
+			console.info(`Requesting TTS from ${endpoint}`);
+			const response = await fetch(endpoint, {
+				method: "POST",
+				headers,
+				signal: abortController.signal,
+				body: JSON.stringify({
+					model: settings.ttsModel,
+					voice: settings.voice,
+					input: text,
+					response_format: settings.responseFormat,
+				}),
+			});
+			console.info(`TTS response: ${response.status} ${response.statusText}`);
 
-		if (!response.ok) {
-			const body = await response.text().catch(() => "");
-			throw new Error(
-				`TTS request failed: ${response.status} ${response.statusText} ${body}`,
-			);
+			if (!response.ok) {
+				const body = await response.text().catch(() => "");
+				throw new Error(
+					`TTS request failed: ${response.status} ${response.statusText} ${body}`,
+				);
+			}
+
+			const audioBytes = await response.arrayBuffer();
+			const contentType = response.headers.get("content-type") ?? "audio/mpeg";
+			return new Blob([audioBytes], { type: contentType });
+		} finally {
+			window.clearTimeout(timeout);
 		}
-
-		return response.blob();
 	}
 }
 
