@@ -29,14 +29,15 @@ OpenAI API互換の `/v1/audio/speech` へPOSTします。API keyはソースコ
 
 - `ttsEndpoint`: `/v1/audio/speech` の完全URL、またはベースURL
 - `apiKey`: Bearer token。空なら `Authorization` ヘッダーは送りません
-- `ttsModel`: 既定値 `tts-1`
-- `voice`: 既定値 `alloy`
+- `ttsModel`: 既定値 `irodori-tts`
+- `voice`: 既定値 `calm_girl`
+- `responseFormat`: 既定値 `wav`
 - `allowedOrigins`: カンマ区切りの許可origin。未指定ならローカル個人用途として全originを許可します
 
 例:
 
 ```text
-http://localhost:5173/avatar.html?ttsEndpoint=http://localhost:8000&ttsModel=tts-1&voice=alloy
+http://localhost:5173/avatar.html?ttsEndpoint=http://127.0.0.1:8088&ttsModel=irodori-tts&voice=calm_girl&responseFormat=wav
 ```
 
 ## 口パク画像

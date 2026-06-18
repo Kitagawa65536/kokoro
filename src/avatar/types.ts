@@ -16,6 +16,7 @@ export interface TtsSettings {
 	apiKey: string;
 	ttsModel: string;
 	voice: string;
+	responseFormat: string;
 	allowedOrigins: string[];
 	characterUrl: string;
 }

@@ -5,10 +5,11 @@ const SETTINGS_KEY = "kokoro.avatar.settings";
 const MOUTH_KEY = "kokoro.avatar.mouthConfig";
 
 const DEFAULT_TTS_SETTINGS: TtsSettings = {
-	ttsEndpoint: "http://localhost:8000/v1/audio/speech",
+	ttsEndpoint: "http://127.0.0.1:8088/v1/audio/speech",
 	apiKey: "",
-	ttsModel: "tts-1",
-	voice: "alloy",
+	ttsModel: "irodori-tts",
+	voice: "calm_girl",
+	responseFormat: "wav",
 	allowedOrigins: [],
 	characterUrl: "/models/character.png",
 };
@@ -41,6 +42,10 @@ export class AvatarSettingsRepository {
 				stored.ttsModel ??
 				DEFAULT_TTS_SETTINGS.ttsModel,
 			voice: query.get("voice") ?? stored.voice ?? DEFAULT_TTS_SETTINGS.voice,
+			responseFormat:
+				query.get("responseFormat") ??
+				stored.responseFormat ??
+				DEFAULT_TTS_SETTINGS.responseFormat,
 			characterUrl:
 				query.get("characterUrl") ??
 				stored.characterUrl ??

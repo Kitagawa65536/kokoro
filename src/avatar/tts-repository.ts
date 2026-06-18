@@ -15,6 +15,7 @@ export class OpenAiSpeechRepository {
 				model: settings.ttsModel,
 				voice: settings.voice,
 				input: text,
+				response_format: settings.responseFormat,
 			}),
 		});
 
