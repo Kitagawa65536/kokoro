@@ -1,8 +1,8 @@
-import { drawPNG, lerpPose, Rig, setupCanvas, type Pose } from "@kokoro/rig";
+import { drawPNG, lerpPose, type Pose, Rig, setupCanvas } from "@kokoro/rig";
 import { DEPTH_TEMPLATE, getDepth } from "@kokoro/rig/depth";
 import gsap from "gsap";
-import { Viewport } from "pixi-viewport";
 import * as PIXI from "pixi.js";
+import { Viewport } from "pixi-viewport";
 import { mergeMouthConfig, mouthStateFromLevel } from "./mouth";
 import type { MouthConfig, MouthSpriteState } from "./types";
 
@@ -10,14 +10,12 @@ export class AvatarView {
 	private app: PIXI.Application | null = null;
 	private viewport: Viewport | null = null;
 	private root: Rig | null = null;
-	private depthTemplate:
-		| {
-				left: Pose;
-				right: Pose;
-				up: Pose;
-				down: Pose;
-		  }
-		| null = null;
+	private depthTemplate: {
+		left: Pose;
+		right: Pose;
+		up: Pose;
+		down: Pose;
+	} | null = null;
 	private readonly pointer = { x: 0.5, y: 0.5 };
 	private mouthLevel = 0;
 	private mouthConfig: MouthConfig;
@@ -99,6 +97,11 @@ export class AvatarView {
 				this.mouthSprites.set(state, sprite);
 			} catch (error) {
 				console.warn(`Mouth sprite is unavailable: ${src}`, error);
+				const sprite = createFallbackMouthSprite(state);
+				applyMouthConfig(sprite, this.mouthConfig);
+				sprite.visible = state === "closed";
+				this.viewport.addChild(sprite);
+				this.mouthSprites.set(state, sprite);
 			}
 		}
 	}
@@ -118,7 +121,11 @@ export class AvatarView {
 		if (!this.root || !this.depthTemplate) return;
 
 		const rootPoses = [
-			lerpPose(this.depthTemplate.left, this.depthTemplate.right, this.pointer.x),
+			lerpPose(
+				this.depthTemplate.left,
+				this.depthTemplate.right,
+				this.pointer.x,
+			),
 			lerpPose(this.depthTemplate.up, this.depthTemplate.down, this.pointer.y),
 		];
 		this.root.apply(rootPoses);
@@ -144,49 +151,14 @@ async function loadCharacter(characterUrl: string) {
 		return { container, root: new Rig(nodes) };
 	} catch (error) {
 		console.warn(
-			`Character image could not be loaded from ${characterUrl}. Falling back to file picker.`,
+			`Character image could not be loaded from ${characterUrl}. Falling back to a generated placeholder.`,
 			error,
 		);
-		return pickAvatarPNG();
+		const nodes = await drawPNG(createFallbackCharacterUrl());
+		const container = new PIXI.Container();
+		for (const node of nodes) container.addChild(node.container);
+		return { container, root: new Rig(nodes) };
 	}
-}
-
-async function pickAvatarPNG() {
-	return new Promise<{
-		container: PIXI.Container;
-		root: Rig;
-	}>((resolve) => {
-		const dialog = document.createElement("dialog");
-		const article = document.createElement("article");
-		const label = document.createElement("label");
-		const input = document.createElement("input");
-		label.textContent = "Avatar PNG";
-		input.type = "file";
-		input.accept = "image/png";
-		label.appendChild(input);
-		article.appendChild(label);
-		dialog.appendChild(article);
-		document.body.appendChild(dialog);
-		dialog.showModal();
-
-		input.addEventListener("change", async () => {
-			const file = input.files?.[0];
-			if (!file) return;
-
-			const url = await new Promise<string>((res, rej) => {
-				const reader = new FileReader();
-				reader.onload = () => res(reader.result as string);
-				reader.onerror = rej;
-				reader.readAsDataURL(file);
-			});
-			const nodes = await drawPNG(url);
-			const container = new PIXI.Container();
-			for (const node of nodes) container.addChild(node.container);
-			dialog.close();
-			dialog.remove();
-			resolve({ container, root: new Rig(nodes) });
-		});
-	});
 }
 
 function centerContainer(container: PIXI.Container, viewport: Viewport): void {
@@ -199,4 +171,67 @@ function applyMouthConfig(sprite: PIXI.Sprite, config: MouthConfig): void {
 	sprite.x = config.x;
 	sprite.y = config.y;
 	sprite.scale.set(config.scale);
+}
+
+function createFallbackMouthSprite(state: MouthSpriteState): PIXI.Sprite {
+	const canvas = document.createElement("canvas");
+	canvas.width = 120;
+	canvas.height = 80;
+	const ctx = canvas.getContext("2d");
+	if (ctx) {
+		ctx.fillStyle = state === "closed" ? "rgba(43, 20, 20, 0.8)" : "#2b1414";
+		ctx.beginPath();
+		ctx.ellipse(60, 40, 48, fallbackMouthHeight(state), 0, 0, Math.PI * 2);
+		ctx.fill();
+	}
+	const texture = PIXI.Texture.from(canvas);
+	const sprite = new PIXI.Sprite(texture);
+	sprite.anchor.set(0.5);
+	return sprite;
+}
+
+function fallbackMouthHeight(state: MouthSpriteState): number {
+	switch (state) {
+		case "open":
+			return 26;
+		case "half":
+			return 14;
+		case "closed":
+			return 4;
+	}
+}
+
+function createFallbackCharacterUrl(): string {
+	const canvas = document.createElement("canvas");
+	canvas.width = 700;
+	canvas.height = 900;
+	const ctx = canvas.getContext("2d");
+	if (!ctx) return "";
+
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	ctx.fillStyle = "#f4d9c8";
+	ctx.beginPath();
+	ctx.arc(350, 280, 170, 0, Math.PI * 2);
+	ctx.fill();
+	ctx.fillStyle = "#6b4a3a";
+	ctx.beginPath();
+	ctx.arc(350, 270, 190, Math.PI, Math.PI * 2);
+	ctx.fill();
+	ctx.fillStyle = "#2f2523";
+	ctx.beginPath();
+	ctx.arc(295, 270, 16, 0, Math.PI * 2);
+	ctx.arc(405, 270, 16, 0, Math.PI * 2);
+	ctx.fill();
+	ctx.strokeStyle = "#9c5d5d";
+	ctx.lineWidth = 8;
+	ctx.beginPath();
+	ctx.moveTo(310, 365);
+	ctx.quadraticCurveTo(350, 390, 390, 365);
+	ctx.stroke();
+	ctx.fillStyle = "#c6d4f0";
+	ctx.beginPath();
+	ctx.roundRect(200, 470, 300, 360, 80);
+	ctx.fill();
+
+	return canvas.toDataURL("image/png");
 }

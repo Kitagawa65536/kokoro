@@ -13,7 +13,7 @@ Vite の既定URLで `http://localhost:5173/avatar.html` を開きます。確�
 
 ## キャラクター画像
 
-既定では `/models/character.png` を読み込みます。存在しない場合はPNGファイル選択にフォールバックします。URL queryまたはlocalStorageで `characterUrl` を指定できます。
+既定では `/models/character.png` を読み込みます。存在しない場合でも落とさず、生成プレースホルダーで起動します。URL queryまたはlocalStorageで `characterUrl` を指定できます。
 
 ```text
 http://localhost:5173/avatar.html?characterUrl=/models/my-character.png
@@ -48,7 +48,7 @@ http://localhost:5173/avatar.html?ttsEndpoint=http://127.0.0.1:8088&ttsModel=iro
 - `public/mouth/half.png`
 - `public/mouth/open.png`
 
-画像が存在しない場合は `console.warn` に留め、Avatar本体は落としません。
+画像が存在しない場合は `console.warn` に留め、生成プレースホルダーの口パーツでAvatar本体は動き続けます。
 
 ## MouthConfig
 

@@ -7,7 +7,9 @@ export class AudioMouthAnalyzer {
 
 	constructor() {
 		this.analyser.fftSize = 512;
-		this.samples = new Uint8Array(new ArrayBuffer(this.analyser.frequencyBinCount));
+		this.samples = new Uint8Array(
+			new ArrayBuffer(this.analyser.frequencyBinCount),
+		);
 	}
 
 	async play(blob: Blob): Promise<HTMLAudioElement> {
@@ -48,7 +50,11 @@ export class AudioMouthAnalyzer {
 	}
 
 	readLevel(): number {
-		if (!this.currentAudio || this.currentAudio.paused || this.currentAudio.ended) {
+		if (
+			!this.currentAudio ||
+			this.currentAudio.paused ||
+			this.currentAudio.ended
+		) {
 			return 0;
 		}
 

@@ -4,7 +4,11 @@ import { AvatarMessageController } from "./avatar/message-controller";
 import { mergeMouthConfig } from "./avatar/mouth";
 import { AvatarSettingsRepository } from "./avatar/settings-repository";
 import { OpenAiSpeechRepository } from "./avatar/tts-repository";
-import type { AvatarRuntimeState, MouthConfig, TtsSettings } from "./avatar/types";
+import type {
+	AvatarRuntimeState,
+	MouthConfig,
+	TtsSettings,
+} from "./avatar/types";
 
 export class KokoroTalkAvatar {
 	private readonly settingsRepository = new AvatarSettingsRepository();

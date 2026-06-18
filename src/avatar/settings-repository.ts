@@ -131,7 +131,9 @@ function parseOrigins(
 	}
 
 	if (Array.isArray(storedValue)) {
-		return storedValue.filter((origin): origin is string => typeof origin === "string");
+		return storedValue.filter(
+			(origin): origin is string => typeof origin === "string",
+		);
 	}
 
 	return [];

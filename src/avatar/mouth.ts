@@ -11,7 +11,9 @@ export const DEFAULT_MOUTH_CONFIG: MouthConfig = {
 	openSrc: "/mouth/open.png",
 };
 
-export function normalizeMouthConfig(config: Partial<MouthConfig>): MouthConfig {
+export function normalizeMouthConfig(
+	config: Partial<MouthConfig>,
+): MouthConfig {
 	return {
 		...DEFAULT_MOUTH_CONFIG,
 		...config,
