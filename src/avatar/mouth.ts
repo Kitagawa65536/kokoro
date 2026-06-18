@@ -1,14 +1,14 @@
 import type { MouthConfig, MouthSpriteState } from "./types";
 
 export const DEFAULT_MOUTH_CONFIG: MouthConfig = {
-	x: 0,
-	y: 0,
+	x: 1152,
+	y: 1385,
 	scale: 1,
 	halfThreshold: 0.15,
 	openThreshold: 0.35,
-	closedSrc: "/mouth/closed.png",
-	halfSrc: "/mouth/half.png",
-	openSrc: "/mouth/open.png",
+	closedSrc: "/kokoro/mouth/closed.png",
+	halfSrc: "/kokoro/mouth/half.png",
+	openSrc: "/kokoro/mouth/open.png",
 };
 
 export function normalizeMouthConfig(

@@ -21,6 +21,7 @@ export class AvatarView {
 	private mouthConfig: MouthConfig;
 	private mouthSprites = new Map<MouthSpriteState, PIXI.Sprite>();
 	private activeMouthState: MouthSpriteState = "closed";
+	private readonly handleResize = () => this.resizeViewport();
 
 	private readonly mount: HTMLElement;
 	private readonly onStatus: (message: string) => void;
@@ -36,21 +37,24 @@ export class AvatarView {
 	}
 
 	async init(characterUrl: string): Promise<void> {
-		const { container, root } = await loadCharacter(characterUrl);
+		const { container, root, bounds } = await loadCharacter(characterUrl);
 		this.root = root;
 		this.app = await setupCanvas(this.mount);
+		const size = getViewportSize(this.mount);
 		this.viewport = new Viewport({
-			screenWidth: window.innerWidth,
-			screenHeight: window.innerHeight,
-			worldWidth: 1000,
-			worldHeight: 1000,
+			screenWidth: size.width,
+			screenHeight: size.height,
+			worldWidth: bounds.width,
+			worldHeight: bounds.height,
 			events: this.app.renderer.events,
 		});
 
 		this.app.stage.addChild(this.viewport);
 		this.viewport.drag().pinch().wheel();
+		normalizeContainerOrigin(container, bounds);
 		this.viewport.addChild(container);
-		centerContainer(container, this.viewport);
+		this.resizeViewport();
+		window.addEventListener("resize", this.handleResize);
 
 		const { sampleDepth } = await getDepth(container, this.app.renderer);
 		this.depthTemplate = DEPTH_TEMPLATE(sampleDepth, 80, 80);
@@ -141,6 +145,18 @@ export class AvatarView {
 			sprite.visible = spriteState === state;
 		}
 	}
+
+	private resizeViewport(): void {
+		if (!this.viewport) return;
+
+		const size = getViewportSize(this.mount);
+		this.viewport.resize(size.width, size.height);
+		this.viewport.fitWorld(false);
+		this.viewport.moveCenter(
+			this.viewport.worldWidth / 2,
+			this.viewport.worldHeight / 2,
+		);
+	}
 }
 
 async function loadCharacter(characterUrl: string) {
@@ -148,7 +164,11 @@ async function loadCharacter(characterUrl: string) {
 		const nodes = await drawPNG(characterUrl);
 		const container = new PIXI.Container();
 		for (const node of nodes) container.addChild(node.container);
-		return { container, root: new Rig(nodes) };
+		return {
+			container,
+			root: new Rig(nodes),
+			bounds: container.getLocalBounds(),
+		};
 	} catch (error) {
 		console.warn(
 			`Character image could not be loaded from ${characterUrl}. Falling back to a generated placeholder.`,
@@ -157,14 +177,20 @@ async function loadCharacter(characterUrl: string) {
 		const nodes = await drawPNG(createFallbackCharacterUrl());
 		const container = new PIXI.Container();
 		for (const node of nodes) container.addChild(node.container);
-		return { container, root: new Rig(nodes) };
+		return {
+			container,
+			root: new Rig(nodes),
+			bounds: container.getLocalBounds(),
+		};
 	}
 }
 
-function centerContainer(container: PIXI.Container, viewport: Viewport): void {
-	const bounds = container.getLocalBounds();
-	container.x = (viewport.worldWidth - bounds.width) / 2;
-	container.y = (viewport.worldHeight - bounds.height) / 2;
+function normalizeContainerOrigin(
+	container: PIXI.Container,
+	bounds: PIXI.Bounds,
+): void {
+	container.x = -bounds.x;
+	container.y = -bounds.y;
 }
 
 function applyMouthConfig(sprite: PIXI.Sprite, config: MouthConfig): void {
@@ -175,13 +201,13 @@ function applyMouthConfig(sprite: PIXI.Sprite, config: MouthConfig): void {
 
 function createFallbackMouthSprite(state: MouthSpriteState): PIXI.Sprite {
 	const canvas = document.createElement("canvas");
-	canvas.width = 120;
-	canvas.height = 80;
+	canvas.width = 320;
+	canvas.height = 180;
 	const ctx = canvas.getContext("2d");
 	if (ctx) {
 		ctx.fillStyle = state === "closed" ? "rgba(43, 20, 20, 0.8)" : "#2b1414";
 		ctx.beginPath();
-		ctx.ellipse(60, 40, 48, fallbackMouthHeight(state), 0, 0, Math.PI * 2);
+		ctx.ellipse(160, 90, 110, fallbackMouthHeight(state), 0, 0, Math.PI * 2);
 		ctx.fill();
 	}
 	const texture = PIXI.Texture.from(canvas);
@@ -193,12 +219,23 @@ function createFallbackMouthSprite(state: MouthSpriteState): PIXI.Sprite {
 function fallbackMouthHeight(state: MouthSpriteState): number {
 	switch (state) {
 		case "open":
-			return 26;
+			return 48;
 		case "half":
-			return 14;
+			return 26;
 		case "closed":
-			return 4;
+			return 7;
 	}
+}
+
+function getViewportSize(mount: HTMLElement): {
+	width: number;
+	height: number;
+} {
+	const rect = mount.getBoundingClientRect();
+	return {
+		width: Math.max(1, Math.round(rect.width || window.innerWidth)),
+		height: Math.max(1, Math.round(rect.height || window.innerHeight)),
+	};
 }
 
 function createFallbackCharacterUrl(): string {

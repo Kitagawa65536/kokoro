@@ -13,10 +13,10 @@ Vite の既定URLで `http://localhost:5173/kokoro/avatar.html` を開きます�
 
 ## キャラクター画像
 
-既定では `/models/character.png` を読み込みます。存在しない場合でも落とさず、生成プレースホルダーで起動します。URL queryまたはlocalStorageで `characterUrl` を指定できます。
+既定では `/kokoro/models/character.png` を読み込みます。存在しない場合でも落とさず、生成プレースホルダーで起動します。URL queryまたはlocalStorageで `characterUrl` を指定できます。
 
 ```text
-http://localhost:5173/avatar.html?characterUrl=/models/my-character.png
+http://127.0.0.1:5173/kokoro/avatar.html?characterUrl=/kokoro/models/my-character.png
 ```
 
 深度推定による視差変形は `depth.html` と同じ `@kokoro/rig/depth` の処理を使います。
@@ -37,7 +37,7 @@ OpenAI API互換の `/v1/audio/speech` へPOSTします。API keyはソースコ
 例:
 
 ```text
-http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav
+http://127.0.0.1:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav&characterUrl=/kokoro/models/character.png
 ```
 
 ## 音声再生の許可
@@ -48,11 +48,13 @@ http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodo
 
 差分スプライトは以下に置きます。
 
-- `public/mouth/closed.png`
-- `public/mouth/half.png`
-- `public/mouth/open.png`
+- `public/mouth/closed.png` -> `/kokoro/mouth/closed.png`
+- `public/mouth/half.png` -> `/kokoro/mouth/half.png`
+- `public/mouth/open.png` -> `/kokoro/mouth/open.png`
 
 画像が存在しない場合は `console.warn` に留め、生成プレースホルダーの口パーツでAvatar本体は動き続けます。
+
+添付キャラ画像向けの初期口中心は、元画像 `2304x3072` の座標でおおよそ `x=1152`, `y=1385` です。`320x180` 程度の透明キャンバス中央に口だけを描いた差分から始めると調整しやすいです。
 
 ## MouthConfig
 
@@ -60,8 +62,8 @@ http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodo
 
 ```json
 {
-  "x": 0,
-  "y": 0,
+  "x": 1152,
+  "y": 1385,
   "scale": 1,
   "halfThreshold": 0.15,
   "openThreshold": 0.35

@@ -12,12 +12,15 @@ export class AvatarMessageController {
 
 	start(): void {
 		window.addEventListener("message", (event) => {
+			const data = event.data as KokoroMessage;
+			console.debug(
+				`Kokoro avatar message received: ${String(data?.type ?? "unknown")} from ${event.origin}`,
+			);
 			if (!this.isAllowed(event.origin)) {
 				console.warn(`Blocked kokoro avatar message from ${event.origin}`);
 				return;
 			}
 
-			const data = event.data as KokoroMessage;
 			void this.handle(data);
 		});
 	}

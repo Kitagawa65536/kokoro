@@ -120,6 +120,12 @@ export class KokoroTalkAvatar {
 		if (this.status) {
 			this.status.textContent = message;
 		}
+		if (window.parent !== window) {
+			window.parent.postMessage(
+				{ type: "kokoro:status", status: message },
+				"*",
+			);
+		}
 	}
 
 	private async playSpeechBlob(blob: Blob): Promise<void> {

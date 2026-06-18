@@ -11,7 +11,7 @@ const DEFAULT_TTS_SETTINGS: TtsSettings = {
 	voice: "codex_test_calm_girl",
 	responseFormat: "wav",
 	allowedOrigins: [],
-	characterUrl: "/models/character.png",
+	characterUrl: "/kokoro/models/character.png",
 };
 
 export class AvatarSettingsRepository {
