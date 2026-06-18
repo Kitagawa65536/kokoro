@@ -1,0 +1,105 @@
+# Kokoro Avatar Integration
+
+`avatar.html` は、外部Web UIから `postMessage` で制御できる喋るキャラクター表示モジュールです。LLM履歴やチャットセッションは持たず、Avatar表示、TTS再生、音量ベース口パクだけを担当します。
+
+## 起動方法
+
+```powershell
+npm install
+npm run dev
+```
+
+Vite の既定URLで `http://localhost:5173/avatar.html` を開きます。確認用に `http://localhost:5173/demo-avatar-controller.html` もあります。
+
+## キャラクター画像
+
+既定では `/models/character.png` を読み込みます。存在しない場合はPNGファイル選択にフォールバックします。URL queryまたはlocalStorageで `characterUrl` を指定できます。
+
+```text
+http://localhost:5173/avatar.html?characterUrl=/models/my-character.png
+```
+
+深度推定による視差変形は `depth.html` と同じ `@kokoro/rig/depth` の処理を使います。
+
+## TTS設定
+
+OpenAI API互換の `/v1/audio/speech` へPOSTします。API keyはソースコードへ埋め込まず、URL queryまたは `localStorage` の `kokoro.avatar.settings` に保存します。
+
+設定項目:
+
+- `ttsEndpoint`: `/v1/audio/speech` の完全URL、またはベースURL
+- `apiKey`: Bearer token。空なら `Authorization` ヘッダーは送りません
+- `ttsModel`: 既定値 `tts-1`
+- `voice`: 既定値 `alloy`
+- `allowedOrigins`: カンマ区切りの許可origin。未指定ならローカル個人用途として全originを許可します
+
+例:
+
+```text
+http://localhost:5173/avatar.html?ttsEndpoint=http://localhost:8000&ttsModel=tts-1&voice=alloy
+```
+
+## 口パク画像
+
+差分スプライトは以下に置きます。
+
+- `public/mouth/closed.png`
+- `public/mouth/half.png`
+- `public/mouth/open.png`
+
+画像が存在しない場合は `console.warn` に留め、Avatar本体は落としません。
+
+## MouthConfig
+
+`kokoro:setMouthConfig` または query parameter で調整します。保存値は `localStorage` の `kokoro.avatar.mouthConfig` に保持します。
+
+```json
+{
+  "x": 0,
+  "y": 0,
+  "scale": 1,
+  "halfThreshold": 0.15,
+  "openThreshold": 0.35
+}
+```
+
+## postMessage API
+
+```js
+iframe.contentWindow.postMessage({
+  type: "kokoro:speak",
+  text: "読み上げる文章"
+}, "*");
+```
+
+```js
+iframe.contentWindow.postMessage({ type: "kokoro:stop" }, "*");
+```
+
+```js
+iframe.contentWindow.postMessage({
+  type: "kokoro:setExpression",
+  expression: "neutral"
+}, "*");
+```
+
+```js
+iframe.contentWindow.postMessage({
+  type: "kokoro:setMouthConfig",
+  config: {
+    x: 0,
+    y: 0,
+    scale: 1,
+    halfThreshold: 0.15,
+    openThreshold: 0.35
+  }
+}, "*");
+```
+
+## SillyTavern連携
+
+SillyTavern側のUI Extensionで `avatar.html` をiframe表示し、AI応答完了時に `kokoro:speak` を送ります。TTS API keyはSillyTavern側では扱わず、Avatar側のURL queryまたはlocalStorageに持たせます。
+
+## CORS注意点
+
+TTSエンドポイントはブラウザから直接呼ばれます。別originのローカルTTSサーバーを使う場合は、TTSサーバー側で `http://localhost:5173` などからのCORSを許可してください。iframe連携の送信元制限は `allowedOrigins` で後から締められる構造です。

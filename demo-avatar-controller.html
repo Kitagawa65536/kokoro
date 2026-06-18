@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kokoro avatar controller</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+      font: 14px/1.5 system-ui, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px;
+      background: #fff;
+      border-right: 1px solid #ddd;
+    }
+
+    label {
+      display: grid;
+      gap: 4px;
+    }
+
+    input,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: transparent;
+    }
+  </style>
+</head>
+
+<body>
+  <form id="controller">
+    <label>
+      Avatar URL
+      <input id="avatar-url" value="./avatar.html" />
+    </label>
+    <label>
+      Speak text
+      <textarea id="text">こんにちは。kokoro avatar のテスト音声です。</textarea>
+    </label>
+    <button type="submit">Test Speak</button>
+    <button type="button" id="stop">Stop</button>
+    <button type="button" id="mouth">Apply Mouth Config</button>
+  </form>
+  <iframe id="avatar-frame" title="kokoro avatar" src="./avatar.html"></iframe>
+
+  <script>
+    const frame = document.getElementById("avatar-frame");
+    const avatarUrl = document.getElementById("avatar-url");
+    const text = document.getElementById("text");
+
+    avatarUrl.addEventListener("change", () => {
+      frame.src = avatarUrl.value;
+    });
+
+    document.getElementById("controller").addEventListener("submit", (event) => {
+      event.preventDefault();
+      frame.contentWindow.postMessage({
+        type: "kokoro:speak",
+        text: text.value,
+      }, "*");
+    });
+
+    document.getElementById("stop").addEventListener("click", () => {
+      frame.contentWindow.postMessage({ type: "kokoro:stop" }, "*");
+    });
+
+    document.getElementById("mouth").addEventListener("click", () => {
+      frame.contentWindow.postMessage({
+        type: "kokoro:setMouthConfig",
+        config: {
+          x: 500,
+          y: 520,
+          scale: 1,
+          halfThreshold: 0.15,
+          openThreshold: 0.35,
+        },
+      }, "*");
+    });
+  </script>
+</body>
+
+</html>

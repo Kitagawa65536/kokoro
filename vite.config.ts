@@ -22,6 +22,11 @@ export default defineConfig({
 				audio: resolve(import.meta.dirname, "audio.html"),
 				template: resolve(import.meta.dirname, "template.html"),
 				depth: resolve(import.meta.dirname, "depth.html"),
+				avatar: resolve(import.meta.dirname, "avatar.html"),
+				demoAvatarController: resolve(
+					import.meta.dirname,
+					"demo-avatar-controller.html",
+				),
 			},
 		},
 	},
