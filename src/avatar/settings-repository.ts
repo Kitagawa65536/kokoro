@@ -5,10 +5,10 @@ const SETTINGS_KEY = "kokoro.avatar.settings";
 const MOUTH_KEY = "kokoro.avatar.mouthConfig";
 
 const DEFAULT_TTS_SETTINGS: TtsSettings = {
-	ttsEndpoint: "http://127.0.0.1:8088/v1/audio/speech",
+	ttsEndpoint: "/irodori-tts/v1/audio/speech",
 	apiKey: "",
 	ttsModel: "irodori-tts",
-	voice: "calm_girl",
+	voice: "codex_test_calm_girl",
 	responseFormat: "wav",
 	allowedOrigins: [],
 	characterUrl: "/models/character.png",

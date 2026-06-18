@@ -12,7 +12,10 @@ export class AudioMouthAnalyzer {
 		);
 	}
 
-	async play(blob: Blob): Promise<HTMLAudioElement> {
+	async play(blob: Blob): Promise<{
+		audio: HTMLAudioElement;
+		playback: Promise<void>;
+	}> {
 		this.stop();
 		await this.audioContext.resume();
 
@@ -32,8 +35,8 @@ export class AudioMouthAnalyzer {
 			{ once: true },
 		);
 
-		await audio.play();
-		return audio;
+		const playback = audio.play();
+		return { audio, playback };
 	}
 
 	stop(): void {

@@ -30,14 +30,14 @@ OpenAI API互換の `/v1/audio/speech` へPOSTします。API keyはソースコ
 - `ttsEndpoint`: `/v1/audio/speech` の完全URL、またはベースURL
 - `apiKey`: Bearer token。空なら `Authorization` ヘッダーは送りません
 - `ttsModel`: 既定値 `irodori-tts`
-- `voice`: 既定値 `calm_girl`
+- `voice`: 既定値 `codex_test_calm_girl`
 - `responseFormat`: 既定値 `wav`
 - `allowedOrigins`: カンマ区切りの許可origin。未指定ならローカル個人用途として全originを許可します
 
 例:
 
 ```text
-http://localhost:5173/avatar.html?ttsEndpoint=http://127.0.0.1:8088&ttsModel=irodori-tts&voice=calm_girl&responseFormat=wav
+http://localhost:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav
 ```
 
 ## 口パク画像
@@ -103,4 +103,4 @@ SillyTavern側のUI Extensionで `avatar.html` をiframe表示し、AI応答完�
 
 ## CORS注意点
 
-TTSエンドポイントはブラウザから直接呼ばれます。別originのローカルTTSサーバーを使う場合は、TTSサーバー側で `http://localhost:5173` などからのCORSを許可してください。iframe連携の送信元制限は `allowedOrigins` で後から締められる構造です。
+TTSエンドポイントはブラウザから呼ばれます。kokoro dev serverでは `/irodori-tts` を `http://127.0.0.1:8088` にプロキシするため、Irodori TTSのようにCORS preflightへ応答しないローカルサーバーでも開発時は同一originで使えます。プロキシを使わず別originのTTSサーバーを直接呼ぶ場合は、TTSサーバー側で `http://localhost:5173` などからのCORSを許可してください。iframe連携の送信元制限は `allowedOrigins` で後から締められる構造です。

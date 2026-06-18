@@ -19,8 +19,10 @@ export class KokoroTalkAvatar {
 	private state: AvatarRuntimeState;
 	private activeAudio: HTMLAudioElement | null = null;
 	private animationFrame = 0;
+	private readonly status: HTMLElement | null;
 
 	constructor(mount: HTMLElement, status: HTMLElement | null = null) {
+		this.status = status;
 		this.settings = this.settingsRepository.getTtsSettings();
 		this.state = {
 			expression: "neutral",
@@ -53,9 +55,17 @@ export class KokoroTalkAvatar {
 
 		try {
 			const blob = await this.speechRepository.synthesize(input, this.settings);
-			this.activeAudio = await this.mouthAnalyzer.play(blob);
+			const { audio, playback } = await this.mouthAnalyzer.play(blob);
+			this.activeAudio = audio;
 			this.state.isSpeaking = true;
 			this.setStatus("Speaking");
+			void playback.catch((error) => {
+				const message = error instanceof Error ? error.message : String(error);
+				this.state.lastError = message;
+				this.state.isSpeaking = false;
+				this.view.setMouthLevel(0);
+				this.setStatus(`Audio playback error: ${message}`);
+			});
 			this.activeAudio.addEventListener(
 				"ended",
 				() => {
@@ -107,6 +117,9 @@ export class KokoroTalkAvatar {
 
 	private setStatus(message: string): void {
 		document.body.dataset.avatarStatus = message;
+		if (this.status) {
+			this.status.textContent = message;
+		}
 	}
 }
 
