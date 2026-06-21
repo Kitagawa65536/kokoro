@@ -18,6 +18,39 @@ export interface Transform {
  */
 export type Pose = (u: number, v: number) => Transform;
 
+export interface RigBounds {
+	minX: number;
+	minY: number;
+	w: number;
+	h: number;
+}
+
+export interface Point {
+	x: number;
+	y: number;
+}
+
+export function transformPointWithPose(
+	point: Point,
+	bounds: RigBounds,
+	transform: Transform,
+): Point {
+	if (transform.rot !== undefined && transform.pivot !== undefined) {
+		const px = bounds.minX + transform.pivot.u * bounds.w;
+		const py = bounds.minY + transform.pivot.v * bounds.h;
+		const dx = point.x - px;
+		const dy = point.y - py;
+		const cos = Math.cos(transform.rot);
+		const sin = Math.sin(transform.rot);
+		return {
+			x: dx * cos - dy * sin - dx + transform.tx,
+			y: dx * sin + dy * cos - dy + transform.ty,
+		};
+	}
+
+	return { x: transform.tx, y: transform.ty };
+}
+
 /**
  * ノード群の頂点を毎フレーム書き換えてメッシュ変形を行うクラス。
  * コンストラクタでバウンディングボックスを計算し、UV 正規化の基準として使う。
@@ -136,19 +169,13 @@ export class Rig {
 
 			for (const pose of poses) {
 				const tr = pose(u, v);
-				if (tr.rot !== undefined && tr.pivot !== undefined) {
-					const px = this.minX + tr.pivot.u * this.w;
-					const py = this.minY + tr.pivot.v * this.h;
-					const dx = gx - px;
-					const dy = gy - py;
-					const cos = Math.cos(tr.rot);
-					const sin = Math.sin(tr.rot);
-					totalTx += dx * cos - dy * sin - dx + tr.tx;
-					totalTy += dx * sin + dy * cos - dy + tr.ty;
-				} else {
-					totalTx += tr.tx;
-					totalTy += tr.ty;
-				}
+				const offset = transformPointWithPose(
+					{ x: gx, y: gy },
+					this,
+					tr,
+				);
+				totalTx += offset.x;
+				totalTy += offset.y;
 			}
 
 			this.verts[vi * 2] = this.origVerts[vi * 2] + totalTx;

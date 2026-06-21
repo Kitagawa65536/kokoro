@@ -1,10 +1,21 @@
-import { drawPNG, lerpPose, type Pose, Rig, setupCanvas } from "@kokoro/rig";
+import {
+	drawPNG,
+	lerpPose,
+	type Point,
+	type Pose,
+	Rig,
+	setupCanvas,
+	transformPointWithPose,
+} from "@kokoro/rig";
 import { DEPTH_TEMPLATE, getDepth } from "@kokoro/rig/depth";
 import gsap from "gsap";
 import * as PIXI from "pixi.js";
 import { Viewport } from "pixi-viewport";
 import { mergeMouthConfig, mouthStateFromLevel } from "./mouth";
 import type { MouthConfig, MouthSpriteState } from "./types";
+
+const IDLE_SWAY_X = 0.055;
+const IDLE_SWAY_Y = 0.035;
 
 export class AvatarView {
 	private app: PIXI.Application | null = null;
@@ -21,6 +32,7 @@ export class AvatarView {
 	private mouthConfig: MouthConfig;
 	private mouthSprites = new Map<MouthSpriteState, PIXI.Sprite>();
 	private activeMouthState: MouthSpriteState = "closed";
+	private mouthOffset: Point = { x: 0, y: 0 };
 	private readonly handleResize = () => this.resizeViewport();
 
 	private readonly mount: HTMLElement;
@@ -66,7 +78,7 @@ export class AvatarView {
 	setMouthConfig(config: Partial<MouthConfig>): MouthConfig {
 		this.mouthConfig = mergeMouthConfig(this.mouthConfig, config);
 		for (const sprite of this.mouthSprites.values()) {
-			applyMouthConfig(sprite, this.mouthConfig);
+			applyMouthConfig(sprite, this.mouthConfig, this.mouthOffset);
 		}
 		return this.mouthConfig;
 	}
@@ -95,14 +107,14 @@ export class AvatarView {
 				const texture = await PIXI.Assets.load<PIXI.Texture>(src);
 				const sprite = new PIXI.Sprite(texture);
 				sprite.anchor.set(0.5);
-				applyMouthConfig(sprite, this.mouthConfig);
+				applyMouthConfig(sprite, this.mouthConfig, this.mouthOffset);
 				sprite.visible = state === "closed";
 				this.viewport.addChild(sprite);
 				this.mouthSprites.set(state, sprite);
 			} catch (error) {
 				console.warn(`Mouth sprite is unavailable: ${src}`, error);
 				const sprite = createFallbackMouthSprite(state);
-				applyMouthConfig(sprite, this.mouthConfig);
+				applyMouthConfig(sprite, this.mouthConfig, this.mouthOffset);
 				sprite.visible = state === "closed";
 				this.viewport.addChild(sprite);
 				this.mouthSprites.set(state, sprite);
@@ -124,16 +136,33 @@ export class AvatarView {
 	private tick(): void {
 		if (!this.root || !this.depthTemplate) return;
 
+		const idleSway = getIdleSway(performance.now());
+		const poseX = clamp01(this.pointer.x + idleSway.x);
+		const poseY = clamp01(this.pointer.y + idleSway.y);
 		const rootPoses = [
 			lerpPose(
 				this.depthTemplate.left,
 				this.depthTemplate.right,
-				this.pointer.x,
+				poseX,
 			),
-			lerpPose(this.depthTemplate.up, this.depthTemplate.down, this.pointer.y),
+			lerpPose(this.depthTemplate.up, this.depthTemplate.down, poseY),
 		];
 		this.root.apply(rootPoses);
+		this.syncMouthPosition(rootPoses);
 		this.syncMouth();
+	}
+
+	private syncMouthPosition(rootPoses: Pose[]): void {
+		if (!this.root) return;
+
+		this.mouthOffset = getPoseOffsetAtPoint(
+			{ x: this.mouthConfig.x, y: this.mouthConfig.y },
+			this.root,
+			rootPoses,
+		);
+		for (const sprite of this.mouthSprites.values()) {
+			applyMouthConfig(sprite, this.mouthConfig, this.mouthOffset);
+		}
 	}
 
 	private syncMouth(): void {
@@ -193,10 +222,57 @@ function normalizeContainerOrigin(
 	container.y = -bounds.y;
 }
 
-function applyMouthConfig(sprite: PIXI.Sprite, config: MouthConfig): void {
-	sprite.x = config.x;
-	sprite.y = config.y;
+function applyMouthConfig(
+	sprite: PIXI.Sprite,
+	config: MouthConfig,
+	offset: Point,
+): void {
+	sprite.x = config.x + offset.x;
+	sprite.y = config.y + offset.y;
 	sprite.scale.set(config.scale);
+}
+
+function getPoseOffsetAtPoint(point: Point, rig: Rig, poses: Pose[]): Point {
+	const u = toClampedUv(point.x, rig.minX, rig.w);
+	const v = toClampedUv(point.y, rig.minY, rig.h);
+	let x = 0;
+	let y = 0;
+
+	for (const pose of poses) {
+		const offset = transformPointWithPose(point, rig, pose(u, v));
+		x += offset.x;
+		y += offset.y;
+	}
+
+	return { x, y };
+}
+
+function toClampedUv(value: number, min: number, size: number): number {
+	if (
+		!Number.isFinite(value) ||
+		!Number.isFinite(min) ||
+		!Number.isFinite(size) ||
+		size === 0
+	) {
+		return 0;
+	}
+	return Math.max(0, Math.min(1, (value - min) / size));
+}
+
+function getIdleSway(nowMs: number): Point {
+	const t = nowMs / 1000;
+	return {
+		x:
+			Math.sin(t * 0.85) * IDLE_SWAY_X +
+			Math.sin(t * 0.31 + 1.7) * IDLE_SWAY_X * 0.35,
+		y:
+			Math.sin(t * 0.67 + 0.8) * IDLE_SWAY_Y +
+			Math.sin(t * 1.13) * IDLE_SWAY_Y * 0.3,
+	};
+}
+
+function clamp01(value: number): number {
+	return Math.max(0, Math.min(1, value));
 }
 
 function createFallbackMouthSprite(state: MouthSpriteState): PIXI.Sprite {
