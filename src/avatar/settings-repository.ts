@@ -7,7 +7,7 @@ const MOUTH_KEY = "kokoro.avatar.mouthConfig";
 const DEFAULT_TTS_SETTINGS: TtsSettings = {
 	ttsEndpoint: "/irodori-tts/v1/audio/speech",
 	apiKey: "",
-	ttsModel: "irodori-tts",
+	ttsModel: "irodori-tts-lite",
 	voice: "codex_test_calm_girl",
 	responseFormat: "wav",
 	allowedOrigins: [],

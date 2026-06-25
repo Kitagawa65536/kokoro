@@ -56,11 +56,25 @@ export async function getDepth(
 		worker.postMessage({ dataURL, model });
 
 		worker.onmessage = (e) => {
-			const { depth, width, height } = e.data as {
+			const message = e.data as {
 				depth: Uint8Array;
 				width: number;
 				height: number;
+				error?: string;
+				model?: string;
+				modelId?: string;
 			};
+			if (message.error) {
+				worker.terminate();
+				reject(
+					new Error(
+						`Depth worker failed for ${message.modelId ?? message.model ?? model}: ${message.error}`,
+					),
+				);
+				return;
+			}
+
+			const { depth, width, height } = message;
 
 			const sampleDepth = (u: number, v: number): number => {
 				const px = Math.min(Math.floor(u * width), width - 1);
@@ -72,8 +86,16 @@ export async function getDepth(
 			worker.terminate();
 		};
 
-		worker.onerror = reject;
+		worker.onerror = (error) => {
+			worker.terminate();
+			reject(new Error(formatWorkerEventError(error)));
+		};
 	});
+}
+
+function formatWorkerEventError(error: ErrorEvent): string {
+	if (error.message) return error.message;
+	return `${error.type || "error"} event from depth worker`;
 }
 
 /**

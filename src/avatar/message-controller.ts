@@ -1,4 +1,5 @@
 import type { KokoroTalkAvatar } from "../avatar";
+import { logAudioLinkage } from "./audio-linkage-logger";
 import type { KokoroMessage } from "./types";
 
 export class AvatarMessageController {
@@ -16,7 +17,15 @@ export class AvatarMessageController {
 			console.debug(
 				`Kokoro avatar message received: ${String(data?.type ?? "unknown")} from ${event.origin}`,
 			);
+			logAudioLinkage("message.received", {
+				type: String(data?.type ?? "unknown"),
+				origin: event.origin,
+			});
 			if (!this.isAllowed(event.origin)) {
+				logAudioLinkage("message.blocked", {
+					type: String(data?.type ?? "unknown"),
+					origin: event.origin,
+				});
 				console.warn(`Blocked kokoro avatar message from ${event.origin}`);
 				return;
 			}
@@ -29,6 +38,9 @@ export class AvatarMessageController {
 		switch (message.type) {
 			case "kokoro:speak":
 				if (typeof message.text === "string" && message.text.trim()) {
+					logAudioLinkage("message.speak.accepted", {
+						textLength: message.text.trim().length,
+					});
 					await this.avatar.speak(message.text);
 				}
 				break;

@@ -1,3 +1,8 @@
+import {
+	formatAudioLogError,
+	logAudioLinkage,
+} from "./audio-linkage-logger";
+
 export class AudioMouthAnalyzer {
 	private readonly audioContext = new AudioContext();
 	private readonly analyser = this.audioContext.createAnalyser();
@@ -13,16 +18,33 @@ export class AudioMouthAnalyzer {
 	}
 
 	unlock(): void {
-		if (this.audioContext.state === "closed") return;
-		void this.audioContext.resume().catch((error) => {
-			console.warn("AudioContext unlock failed.", error);
+		logAudioLinkage("audio-context.unlock.request", {
+			state: this.audioContext.state,
 		});
+		if (this.audioContext.state === "closed") return;
+		void this.audioContext
+			.resume()
+			.then(() => {
+				logAudioLinkage("audio-context.unlock.resolved", {
+					state: this.audioContext.state,
+				});
+			})
+			.catch((error) => {
+				const message = formatAudioLogError(error);
+				logAudioLinkage("audio-context.unlock.error", { message });
+				console.warn("AudioContext unlock failed.", error);
+			});
 	}
 
 	async play(blob: Blob): Promise<{
 		audio: HTMLAudioElement;
 		playback: Promise<void>;
 	}> {
+		logAudioLinkage("audio.play.prepare", {
+			size: blob.size,
+			type: blob.type,
+			audioContextState: this.audioContext.state,
+		});
 		this.stop();
 		this.resumeAudioContext();
 
@@ -34,6 +56,11 @@ export class AudioMouthAnalyzer {
 		this.mediaSource.connect(this.analyser);
 		this.analyser.connect(this.audioContext.destination);
 		this.currentAudio = audio;
+		logAudioLinkage("audio.play.element-created", {
+			readyState: audio.readyState,
+			networkState: audio.networkState,
+			audioContextState: this.audioContext.state,
+		});
 
 		const revokeObjectUrl = () => URL.revokeObjectURL(objectUrl);
 		audio.addEventListener("ended", revokeObjectUrl, { once: true });
@@ -44,6 +71,13 @@ export class AudioMouthAnalyzer {
 	}
 
 	stop(): void {
+		if (this.currentAudio || this.mediaSource) {
+			logAudioLinkage("audio.stop", {
+				hadAudio: this.currentAudio !== null,
+				hadMediaSource: this.mediaSource !== null,
+				audioContextState: this.audioContext.state,
+			});
+		}
 		if (this.currentAudio) {
 			this.currentAudio.pause();
 			this.currentAudio.currentTime = 0;
@@ -76,10 +110,22 @@ export class AudioMouthAnalyzer {
 	}
 
 	private resumeAudioContext(): void {
+		logAudioLinkage("audio-context.resume.check", {
+			state: this.audioContext.state,
+		});
 		if (this.audioContext.state !== "suspended") return;
 
-		void this.audioContext.resume().catch((error) => {
-			console.warn("AudioContext resume failed.", error);
-		});
+		void this.audioContext
+			.resume()
+			.then(() => {
+				logAudioLinkage("audio-context.resume.resolved", {
+					state: this.audioContext.state,
+				});
+			})
+			.catch((error) => {
+				const message = formatAudioLogError(error);
+				logAudioLinkage("audio-context.resume.error", { message });
+				console.warn("AudioContext resume failed.", error);
+			});
 	}
 }

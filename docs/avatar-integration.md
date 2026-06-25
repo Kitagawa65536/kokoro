@@ -29,7 +29,7 @@ OpenAI API互換の `/v1/audio/speech` へPOSTします。API keyはソースコ
 
 - `ttsEndpoint`: `/v1/audio/speech` の完全URL、またはベースURL
 - `apiKey`: Bearer token。空なら `Authorization` ヘッダーは送りません
-- `ttsModel`: 既定値 `irodori-tts`
+- `ttsModel`: 既定値 `irodori-tts-lite`
 - `voice`: 既定値 `codex_test_calm_girl`
 - `responseFormat`: 既定値 `wav`
 - `allowedOrigins`: カンマ区切りの許可origin。未指定ならローカル個人用途として全originを許可します
@@ -37,7 +37,7 @@ OpenAI API互換の `/v1/audio/speech` へPOSTします。API keyはソースコ
 例:
 
 ```text
-http://127.0.0.1:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts&voice=codex_test_calm_girl&responseFormat=wav&characterUrl=/kokoro/models/character.png
+http://127.0.0.1:5173/kokoro/avatar.html?ttsEndpoint=/irodori-tts&ttsModel=irodori-tts-lite&voice=codex_test_calm_girl&responseFormat=wav&characterUrl=/kokoro/models/character.png
 ```
 
 ## 音声再生の許可

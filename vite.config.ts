@@ -1,8 +1,15 @@
 import type { IncomingMessage } from "node:http";
-import { resolve } from "node:path";
+import { appendFile, mkdir } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { defineConfig, type PluginOption } from "vite";
 
 const IRODORI_PROXY_PREFIX = "/irodori-tts";
+const AUDIO_LOG_PATH = resolve(
+	import.meta.dirname,
+	"logs",
+	"audio-linkage.log",
+);
+const AUDIO_LOG_ENDPOINTS = new Set(["/__audio-log", "/kokoro/__audio-log"]);
 
 function irodoriTtsProxy(): PluginOption {
 	return {
@@ -36,6 +43,45 @@ function irodoriTtsProxy(): PluginOption {
 	};
 }
 
+function audioLinkageLogWriter(): PluginOption {
+	return {
+		name: "audio-linkage-log-writer",
+		configureServer(server) {
+			server.middlewares.use(async (req, res, next) => {
+				const path = new URL(req.url ?? "/", "http://localhost").pathname;
+				if (!AUDIO_LOG_ENDPOINTS.has(path)) {
+					next();
+					return;
+				}
+
+				if (req.method !== "POST") {
+					res.statusCode = 405;
+					res.setHeader("allow", "POST");
+					res.end("Method Not Allowed");
+					return;
+				}
+
+				try {
+					const body = await readRequestBody(req);
+					const raw = body.toString("utf8");
+					const entry = JSON.parse(raw) as Record<string, unknown>;
+					await mkdir(dirname(AUDIO_LOG_PATH), { recursive: true });
+					await appendFile(AUDIO_LOG_PATH, `${JSON.stringify(entry)}\n`, "utf8");
+					res.statusCode = 204;
+					res.end();
+				} catch (error) {
+					const message =
+						error instanceof Error ? error.message : String(error);
+					server.config.logger.warn(`Failed to write audio linkage log: ${message}`);
+					res.statusCode = 500;
+					res.setHeader("content-type", "application/json");
+					res.end(JSON.stringify({ error: { message } }));
+				}
+			});
+		},
+	};
+}
+
 async function readRequestBody(req: IncomingMessage): Promise<Buffer> {
 	const chunks: Buffer[] = [];
 	for await (const chunk of req) {
@@ -59,7 +105,7 @@ function copyRequestHeaders(req: IncomingMessage): Headers {
 
 export default defineConfig({
 	base: "/kokoro/",
-	plugins: [irodoriTtsProxy()],
+	plugins: [audioLinkageLogWriter(), irodoriTtsProxy()],
 	server: {
 		headers: {
 			"Cross-Origin-Opener-Policy": "same-origin",

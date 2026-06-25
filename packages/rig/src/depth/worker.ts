@@ -18,11 +18,11 @@ self.onmessage = async (
 ) => {
 	const { dataURL, model } = e.data;
 
-	estimator ??= await pipeline("depth-estimation", MODEL_IDS[model], {
-		progress_callback: (p) => console.log(p),
-	});
-
 	try {
+		estimator ??= await pipeline("depth-estimation", MODEL_IDS[model], {
+			progress_callback: (p) => console.log(p),
+		});
+
 		const { depth } = await estimator(dataURL);
 
 		self.postMessage({
@@ -32,5 +32,16 @@ self.onmessage = async (
 		});
 	} catch (err) {
 		console.error("inference failed", err);
+		self.postMessage({
+			error: formatWorkerError(err),
+			model,
+			modelId: MODEL_IDS[model],
+		});
 	}
 };
+
+function formatWorkerError(error: unknown): string {
+	if (error instanceof Error) return error.message;
+	if (error instanceof Event) return `${error.type || "event"} event`;
+	return String(error);
+}

@@ -11,11 +11,12 @@ import { DEPTH_TEMPLATE, getDepth } from "@kokoro/rig/depth";
 import gsap from "gsap";
 import * as PIXI from "pixi.js";
 import { Viewport } from "pixi-viewport";
+import { formatAudioLogError, logAudioLinkage } from "./audio-linkage-logger";
 import { mergeMouthConfig, mouthStateFromLevel } from "./mouth";
 import type { MouthConfig, MouthSpriteState } from "./types";
 
-const IDLE_SWAY_X = 0.055;
-const IDLE_SWAY_Y = 0.035;
+const IDLE_SWAY_X = 0.14;
+const IDLE_SWAY_Y = 0.09;
 
 export class AvatarView {
 	private app: PIXI.Application | null = null;
@@ -68,8 +69,7 @@ export class AvatarView {
 		this.resizeViewport();
 		window.addEventListener("resize", this.handleResize);
 
-		const { sampleDepth } = await getDepth(container, this.app.renderer);
-		this.depthTemplate = DEPTH_TEMPLATE(sampleDepth, 80, 80);
+		this.depthTemplate = await this.createDepthTemplate(container);
 		await this.loadMouthSprites();
 		this.registerPointer();
 		this.app.ticker.add(() => this.tick());
@@ -89,6 +89,24 @@ export class AvatarView {
 
 	setExpression(name: string): void {
 		this.onStatus(`Expression: ${name}`);
+	}
+
+	private async createDepthTemplate(
+		container: PIXI.Container,
+	): Promise<NonNullable<AvatarView["depthTemplate"]>> {
+		if (!this.app) return DEPTH_TEMPLATE(() => 0.5, 80, 80);
+
+		try {
+			logAudioLinkage("avatar.depth.start");
+			const { sampleDepth } = await getDepth(container, this.app.renderer);
+			logAudioLinkage("avatar.depth.ready");
+			return DEPTH_TEMPLATE(sampleDepth, 80, 80);
+		} catch (error) {
+			const message = formatAudioLogError(error);
+			logAudioLinkage("avatar.depth.fallback", { message });
+			console.warn("Depth estimation failed; using fallback avatar sway.", error);
+			return DEPTH_TEMPLATE(() => 0.5, 80, 80);
+		}
 	}
 
 	private async loadMouthSprites(): Promise<void> {
@@ -263,11 +281,11 @@ function getIdleSway(nowMs: number): Point {
 	const t = nowMs / 1000;
 	return {
 		x:
-			Math.sin(t * 0.85) * IDLE_SWAY_X +
-			Math.sin(t * 0.31 + 1.7) * IDLE_SWAY_X * 0.35,
+			Math.sin(t * 1.15) * IDLE_SWAY_X +
+			Math.sin(t * 0.47 + 1.7) * IDLE_SWAY_X * 0.4,
 		y:
-			Math.sin(t * 0.67 + 0.8) * IDLE_SWAY_Y +
-			Math.sin(t * 1.13) * IDLE_SWAY_Y * 0.3,
+			Math.sin(t * 0.92 + 0.8) * IDLE_SWAY_Y +
+			Math.sin(t * 1.55) * IDLE_SWAY_Y * 0.35,
 	};
 }
 
